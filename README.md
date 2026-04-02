@@ -4,7 +4,9 @@ Mobile companion UI for [Cherry Studio](https://github.com/CherryHQ/cherry-studi
 
 Created by 花花虫.
 
-Cherry Mobile turns a desktop-first Cherry Studio install into something you can actually use from your phone: browse assistants, inspect real conversation history, open live sessions, and continue chatting without remoting into the whole desktop.
+Many Cherry Studio power users reach for it because it gives them a freer desktop shell for custom models, system prompts, tool chains, and jailbreak-style prompt workflows. The problem is that Cherry Studio has no mobile version. Once you leave your desk, that entire setup disappears with the desktop app.
+
+Cherry Mobile exists to keep that same Cherry workspace in your pocket: browse assistants, inspect real conversation history, open live sessions, and continue chatting from your phone without remoting into the whole desktop.
 
 It is a self-hosted bridge, not an official Cherry Studio plugin. The core idea is simple:
 
@@ -53,6 +55,19 @@ Cherry Mobile fills that gap without trying to replace the desktop app. It adds 
 - supports session-cookie auth for the web UI
 - installable as a PWA for a cleaner phone experience
 - optimized for one-user, self-hosted usage
+
+## Screenshots
+
+Sanitized demo screenshots of the real interface:
+
+<p align="center">
+  <img src="docs/screenshots/history-overview.png" alt="Cherry Mobile desktop overview" width="900" />
+</p>
+
+<p align="center">
+  <img src="docs/screenshots/mobile-history.png" alt="Cherry Mobile mobile history view" width="260" />
+  <img src="docs/screenshots/mobile-agent.png" alt="Cherry Mobile mobile agent session view" width="260" />
+</p>
 
 ## End-to-End Flow
 
