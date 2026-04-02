@@ -49,6 +49,200 @@ const els = {
   backButton: document.querySelector("#backButton"),
 };
 
+const translations = {
+  en: {
+    // Header
+    "hero.eyebrow": "Phone Console",
+    "hero.subtitle": "Browse assistants, topics, and conversation history from your phone. Continue chatting on the go.",
+    "mode.history": "History",
+    "mode.agents": "Agents",
+    "status.connecting": "Connecting",
+    "status.connected": "Connected",
+    "status.error": "Error",
+    "status.unavailable": "Unavailable",
+    "btn.refresh": "Refresh",
+
+    // Assistant panel
+    "panel.assistants.eyebrow": "Cherry History",
+    "panel.assistants.title": "Assistants",
+
+    // Sidebar
+    "panel.topics.eyebrow": "Assistant Topics",
+    "panel.topics.title": "Topics",
+    "panel.sessions.title": "Sessions",
+    "agent.label": "Agent",
+    "btn.newSession": "New Session",
+
+    // Conversation
+    "btn.back": "← Back",
+    "conv.selectTopic": "Select a topic",
+    "conv.selectAssistant": "Select an assistant",
+    "conv.selectSession": "Select a session",
+    "btn.refreshTopic": "Refresh Topic",
+    "btn.refreshCurrent": "Refresh",
+    "conv.emptyState": "Conversation messages will appear here.",
+    "composer.placeholder": "Continue this Cherry conversation",
+    "composer.hint.sessionAuto": "If no session is selected, a new one will be created on send.",
+    "composer.hint.noAgents": "No agents available. You can only browse history.",
+    "btn.send": "Send",
+    "btn.continue": "Continue",
+
+    // History mode specifics
+    "composer.placeholder.historyActive": "Continue this history topic",
+    "composer.placeholder.historyInactive": "Open a history topic first",
+    "composer.hint.historyActive": "Messages are sent through desktop Cherry — phone and desktop share the same conversation.",
+    "composer.hint.historyInactive": "Open a topic first to continue chatting.",
+
+    // Dynamic content
+    "time.unknown": "Unknown time",
+    "role.user": "You",
+    "role.assistant": "Assistant",
+    "role.system": "System",
+    "role.tool": "Tool",
+    "untitled.session": "Untitled Session",
+    "untitled.assistant": "Untitled Assistant",
+    "untitled.topic": "Untitled Topic",
+    "empty.noAssistants": "No assistants found in Cherry.",
+    "empty.selectAssistant": "Select an assistant first.",
+    "empty.noTopics": "This assistant has no topics yet.",
+    "empty.noAgents": "No agents available.",
+    "empty.noAgentsOption": "No agents available",
+    "empty.noSessions": "This agent has no sessions yet.",
+    "empty.noMessages": "This session has no messages yet.",
+    "empty.topicHistory": "Previous messages for this topic will appear here.",
+    "empty.topicNoMessages": "This topic has no messages to display.",
+    "empty.noTextBlocks": "(No parseable text blocks in this message)",
+    "empty.loadingTopic": "Loading topic history…",
+    "meta.topics": "topics",
+    "meta.messages": "messages",
+    "meta.noPreview": "No preview",
+    "label.assistantPrefix": "Assistant",
+
+    // Errors
+    "error.agentNotFound": "Agent not found.",
+    "error.streamNoBody": "Stream response has no readable body.",
+    "error.sendFailed": "Send failed:",
+    "error.openTopicFirst": "Open a history topic first.",
+    "error.replyTimeout": "Timed out waiting for a reply. It may still be processing — try refreshing later.",
+    "error.refreshFailed": "Refresh failed:",
+    "error.createSessionFailed": "Failed to create session:",
+    "error.initFailed": "Initialization failed:",
+
+    // Session name
+    "session.mobilePrefix": "Mobile",
+
+    // Language toggle
+    "lang.toggle": "中文",
+  },
+  zh: {
+    "hero.eyebrow": "手机控制台",
+    "hero.subtitle": "在手机上查看 Cherry 的助手、话题和历史正文，也能继续发消息。",
+    "mode.history": "历史对话",
+    "mode.agents": "Agent 会话",
+    "status.connecting": "连接中",
+    "status.connected": "已连接",
+    "status.error": "异常",
+    "status.unavailable": "不可用",
+    "btn.refresh": "刷新",
+
+    "panel.assistants.eyebrow": "Cherry History",
+    "panel.assistants.title": "助手",
+
+    "panel.topics.eyebrow": "助手话题",
+    "panel.topics.title": "话题",
+    "panel.sessions.title": "会话",
+    "agent.label": "Agent",
+    "btn.newSession": "新会话",
+
+    "btn.back": "← 返回",
+    "conv.selectTopic": "选择一个话题",
+    "conv.selectAssistant": "选择一个助手",
+    "conv.selectSession": "选择一个会话",
+    "btn.refreshTopic": "刷新当前话题",
+    "btn.refreshCurrent": "刷新当前",
+    "conv.emptyState": "会话内容会显示在这里。",
+    "composer.placeholder": "给当前 Cherry 会话继续发消息",
+    "composer.hint.sessionAuto": "如果没选会话，发送时会自动创建一个新会话。",
+    "composer.hint.noAgents": "当前没有可用 agent，只能浏览历史对话。",
+    "btn.send": "发送",
+    "btn.continue": "续聊",
+
+    "composer.placeholder.historyActive": "基于这个历史话题继续聊",
+    "composer.placeholder.historyInactive": "先打开一个历史话题，再继续聊",
+    "composer.hint.historyActive": "会直接驱动桌面 Cherry 在这个真实话题里发送，手机和电脑看到的是同一份记录。",
+    "composer.hint.historyInactive": "先点开一个具体话题，再继续聊。",
+
+    "time.unknown": "未知时间",
+    "role.user": "我",
+    "role.assistant": "助手",
+    "role.system": "系统",
+    "role.tool": "工具",
+    "untitled.session": "未命名会话",
+    "untitled.assistant": "未命名助手",
+    "untitled.topic": "未命名话题",
+    "empty.noAssistants": "还没有读到 Cherry 里的助手。",
+    "empty.selectAssistant": "先选择一个助手。",
+    "empty.noTopics": "这个助手下面还没有话题。",
+    "empty.noAgents": "当前没有可用 agent。",
+    "empty.noAgentsOption": "暂无 agent",
+    "empty.noSessions": "这个 agent 还没有会话。",
+    "empty.noMessages": "这个会话还没有消息。",
+    "empty.topicHistory": "这里会显示这个话题的旧对话内容。",
+    "empty.topicNoMessages": "这个话题还没有可显示的消息。",
+    "empty.noTextBlocks": "（这条消息没有可解析的文本块）",
+    "empty.loadingTopic": "正在读取这个话题的历史正文。",
+    "meta.topics": "个话题",
+    "meta.messages": "条消息",
+    "meta.noPreview": "暂无摘要",
+    "label.assistantPrefix": "助手",
+
+    "error.agentNotFound": "没有找到 agent。",
+    "error.streamNoBody": "流式响应没有可读数据。",
+    "error.sendFailed": "发送失败：",
+    "error.openTopicFirst": "先打开一个历史话题。",
+    "error.replyTimeout": "等待回复超时，可能还在后台处理中。稍后刷新试试。",
+    "error.refreshFailed": "刷新失败：",
+    "error.createSessionFailed": "创建会话失败：",
+    "error.initFailed": "初始化失败：",
+
+    "session.mobilePrefix": "手机会话",
+
+    "lang.toggle": "EN",
+  },
+};
+
+let currentLang = localStorage.getItem("cherry-mobile-lang") || "en";
+
+function t(key) {
+  return translations[currentLang]?.[key] ?? translations.en[key] ?? key;
+}
+
+function setLang(lang) {
+  currentLang = lang;
+  localStorage.setItem("cherry-mobile-lang", lang);
+  applyStaticI18n();
+  updateModeUI();
+  renderAssistantList();
+  renderHistoryTopics();
+  showHistoryHeader();
+  if (state.mode === "history") {
+    renderHistoryMessages();
+  } else {
+    renderAgentMessages();
+  }
+}
+
+function applyStaticI18n() {
+  for (const el of document.querySelectorAll("[data-i18n]")) {
+    el.textContent = t(el.dataset.i18n);
+  }
+  for (const el of document.querySelectorAll("[data-i18n-placeholder]")) {
+    el.placeholder = t(el.dataset.i18nPlaceholder);
+  }
+  const langBtn = document.querySelector("#langToggle");
+  if (langBtn) langBtn.textContent = t("lang.toggle");
+}
+
 const SCROLL_BOTTOM_THRESHOLD = 72;
 
 function enterConversationFocus() {
@@ -77,10 +271,10 @@ function dateValue(value) {
 }
 
 function formatDate(value) {
-  if (!value) return "Unknown time";
+  if (!value) return t("time.unknown");
   const date = new Date(value);
   if (Number.isNaN(date.getTime())) return String(value);
-  return new Intl.DateTimeFormat("en-US", {
+  return new Intl.DateTimeFormat(currentLang === "zh" ? "zh-CN" : "en-US", {
     month: "short",
     day: "numeric",
     hour: "2-digit",
@@ -98,14 +292,7 @@ function escapeHtml(text) {
 }
 
 function roleLabel(role) {
-  return (
-    {
-      user: "You",
-      assistant: "Assistant",
-      system: "System",
-      tool: "Tool",
-    }[role] ?? role
-  );
+  return t("role." + role) ?? role;
 }
 
 function createTextMessage(role, text) {
@@ -178,23 +365,23 @@ function updateActionAvailability() {
   const historyReady = Boolean(state.selectedHistoryTopic);
 
   if (state.mode === "history") {
-    els.sendButton.textContent = "Continue";
+    els.sendButton.textContent = t("btn.continue");
     els.sendButton.disabled = state.sending || !historyReady;
     els.composerInput.disabled = state.sending || !historyReady;
     els.composerInput.placeholder = state.selectedHistoryTopic
-      ? "Continue this history topic"
-      : "Open a history topic first";
+      ? t("composer.placeholder.historyActive")
+      : t("composer.placeholder.historyInactive");
     els.composerHint.textContent = historyReady
-      ? "Messages are sent through desktop Cherry — phone and desktop share the same conversation."
-      : "Open a topic first to continue chatting.";
+      ? t("composer.hint.historyActive")
+      : t("composer.hint.historyInactive");
   } else {
-    els.sendButton.textContent = "Send";
+    els.sendButton.textContent = t("btn.send");
     els.sendButton.disabled = state.sending || !agentReady;
     els.composerInput.disabled = state.sending || !agentReady;
-    els.composerInput.placeholder = "Continue this Cherry conversation";
+    els.composerInput.placeholder = t("composer.placeholder");
     els.composerHint.textContent = agentReady
-      ? "If no session is selected, a new one will be created on send."
-      : "No agents available. You can only browse history.";
+      ? t("composer.hint.sessionAuto")
+      : t("composer.hint.noAgents");
   }
 
   els.agentSelect.disabled = state.sending || !agentReady;
@@ -222,7 +409,7 @@ function updateModeUI() {
   els.historyControls.classList.toggle("hidden", state.mode !== "history");
   els.agentControls.classList.toggle("hidden", state.mode !== "agents");
   els.composer.classList.remove("hidden");
-  els.refreshSessionButton.textContent = state.mode === "history" ? "Refresh Topic" : "Refresh";
+  els.refreshSessionButton.textContent = state.mode === "history" ? t("btn.refreshTopic") : t("btn.refreshCurrent");
   updateActionAvailability();
 }
 
@@ -253,10 +440,10 @@ async function api(path, options = {}) {
 async function refreshHealth() {
   try {
     const health = await api("/health");
-    setStatus(health.status === "ok" ? "Connected" : "Error", health.status === "ok" ? "ok" : "bad");
+    setStatus(health.status === "ok" ? t("status.connected") : t("status.error"), health.status === "ok" ? "ok" : "bad");
   } catch (error) {
     console.error(error);
-    setStatus("Unavailable", "bad");
+    setStatus(t("status.unavailable"), "bad");
   }
 }
 
@@ -275,7 +462,7 @@ function sortedTopics(assistant) {
 }
 
 function sessionLabel(session) {
-  return session.name?.trim() || "Untitled Session";
+  return session.name?.trim() || t("untitled.session");
 }
 
 function normalizeSessions(sessions) {
@@ -310,7 +497,7 @@ function renderAssistantList() {
   if (!state.historyAssistants.length) {
     const empty = document.createElement("div");
     empty.className = "empty-state compact";
-    empty.innerHTML = "<p>No assistants found in Cherry.</p>";
+    empty.innerHTML = `<p>${escapeHtml(t("empty.noAssistants"))}</p>`;
     els.assistantList.append(empty);
     return;
   }
@@ -323,8 +510,8 @@ function renderAssistantList() {
     button.innerHTML = `
       <span class="assistant-emoji">${escapeHtml(assistant.emoji || "😀")}</span>
       <span class="assistant-copy">
-        <span class="assistant-name">${escapeHtml(assistant.name || "Untitled Assistant")}</span>
-        <span class="assistant-meta">${escapeHtml(String(assistant.topics?.length ?? 0))} topics</span>
+        <span class="assistant-name">${escapeHtml(assistant.name || t("untitled.assistant"))}</span>
+        <span class="assistant-meta">${escapeHtml(String(assistant.topics?.length ?? 0))} ${escapeHtml(t("meta.topics"))}</span>
       </span>
     `;
     button.addEventListener("click", async () => {
@@ -357,14 +544,14 @@ function renderHistoryTopics() {
   const assistant = getSelectedHistoryAssistant();
   const topics = sortedTopics(assistant);
 
-  els.listLabel.textContent = assistant ? `Assistant · ${assistant.name}` : "Cherry History";
-  els.listTitle.textContent = "Topics";
+  els.listLabel.textContent = assistant ? `${t("label.assistantPrefix")} · ${assistant.name}` : t("panel.assistants.eyebrow");
+  els.listTitle.textContent = t("panel.topics.title");
   els.sessionList.innerHTML = "";
 
   if (!assistant) {
     const empty = document.createElement("div");
     empty.className = "empty-state";
-    empty.innerHTML = "<p>Select an assistant first.</p>";
+    empty.innerHTML = `<p>${escapeHtml(t("empty.selectAssistant"))}</p>`;
     els.sessionList.append(empty);
     return;
   }
@@ -372,7 +559,7 @@ function renderHistoryTopics() {
   if (!topics.length) {
     const empty = document.createElement("div");
     empty.className = "empty-state";
-    empty.innerHTML = "<p>This assistant has no topics yet.</p>";
+    empty.innerHTML = `<p>${escapeHtml(t("empty.noTopics"))}</p>`;
     els.sessionList.append(empty);
     return;
   }
@@ -383,11 +570,11 @@ function renderHistoryTopics() {
     button.disabled = state.sending;
     button.className = `session-card ${topic.id === state.selectedHistoryTopicId ? "active" : ""}`.trim();
     button.innerHTML = `
-      <span class="session-title">${escapeHtml(topic.name || "Untitled Topic")}</span>
+      <span class="session-title">${escapeHtml(topic.name || t("untitled.topic"))}</span>
       <span class="session-meta">${escapeHtml(formatDate(topic.updatedAt || topic.createdAt))} · ${escapeHtml(
         String(topic.messageCount ?? 0),
-      )} messages</span>
-      <span class="session-meta">${escapeHtml(topic.preview || "No preview")}</span>
+      )} ${escapeHtml(t("meta.messages"))}</span>
+      <span class="session-meta">${escapeHtml(topic.preview || t("meta.noPreview"))}</span>
     `;
     button.addEventListener("click", () => {
       if (state.sending) return;
@@ -403,7 +590,7 @@ function renderAgentOptions() {
   if (!state.agents.length) {
     const option = document.createElement("option");
     option.value = "";
-    option.textContent = "No agents available";
+    option.textContent = t("empty.noAgentsOption");
     els.agentSelect.append(option);
     els.agentSelect.disabled = true;
     updateActionAvailability();
@@ -423,13 +610,13 @@ function renderAgentOptions() {
 
 function renderSessions() {
   els.listLabel.textContent = "Cherry Agent";
-  els.listTitle.textContent = "Sessions";
+  els.listTitle.textContent = t("panel.sessions.title");
   els.sessionList.innerHTML = "";
 
   if (!state.agents.length) {
     const empty = document.createElement("div");
     empty.className = "empty-state";
-    empty.innerHTML = "<p>No agents available.</p>";
+    empty.innerHTML = `<p>${escapeHtml(t("empty.noAgents"))}</p>`;
     els.sessionList.append(empty);
     return;
   }
@@ -437,7 +624,7 @@ function renderSessions() {
   if (!state.sessions.length) {
     const empty = document.createElement("div");
     empty.className = "empty-state";
-    empty.innerHTML = "<p>This agent has no sessions yet.</p>";
+    empty.innerHTML = `<p>${escapeHtml(t("empty.noSessions"))}</p>`;
     els.sessionList.append(empty);
     return;
   }
@@ -464,18 +651,18 @@ function showHistoryHeader() {
   const topic = state.selectedHistoryTopic;
 
   if (!assistant) {
-    setConversationHeader("History", "Select an assistant");
+    setConversationHeader(t("mode.history"), t("conv.selectAssistant"));
     return;
   }
 
   if (!topic) {
-    setConversationHeader(`${assistant.emoji || "😀"} ${assistant.name}`, "Select a topic");
+    setConversationHeader(`${assistant.emoji || "😀"} ${assistant.name}`, t("conv.selectTopic"));
     return;
   }
 
   setConversationHeader(
     `${assistant.emoji || "😀"} ${assistant.name} · ${formatDate(topic.updatedAt || topic.createdAt)}`,
-    topic.name || "Untitled Topic",
+    topic.name || t("untitled.topic"),
   );
 }
 
@@ -525,7 +712,7 @@ function renderAgentMessages(extraAssistant = null, options = {}) {
   els.messages.innerHTML = "";
 
   if (!messages.length && !extraAssistant) {
-    renderConversationEmpty("This session has no messages yet.");
+    renderConversationEmpty(t("empty.noMessages"));
     return;
   }
 
@@ -548,7 +735,7 @@ function renderHistoryMessages(options = {}) {
   els.messages.innerHTML = "";
 
   if (!topic) {
-    renderConversationEmpty("Previous messages for this topic will appear here.");
+    renderConversationEmpty(t("empty.topicHistory"));
     return;
   }
 
@@ -557,12 +744,12 @@ function renderHistoryMessages(options = {}) {
   );
 
   if (!messages.length) {
-    renderConversationEmpty("This topic has no messages to display.");
+    renderConversationEmpty(t("empty.topicNoMessages"));
     return;
   }
 
   for (const message of messages) {
-    const text = String(message.content || "").trim() || "(No parseable text blocks in this message)";
+    const text = String(message.content || "").trim() || t("empty.noTextBlocks");
     els.messages.append(renderMessageBubble(message.role, text, formatDate(message.createdAt)));
   }
 
@@ -640,7 +827,7 @@ async function loadHistoryTopicWithOptions(topicId, options = {}) {
   renderHistoryTopics();
   showHistoryHeader();
   if (!options.silent) {
-    renderConversationEmpty("Loading topic history…");
+    renderConversationEmpty(t("empty.loadingTopic"));
   }
 
   const requestId = ++historyTopicRequestToken;
@@ -748,7 +935,7 @@ async function loadSessions() {
 
 function showAgentHeader(session = state.selectedSession) {
   if (!session) {
-    setConversationHeader("Session", "Select a session");
+    setConversationHeader(t("panel.sessions.title"), t("conv.selectSession"));
     return;
   }
 
@@ -818,11 +1005,11 @@ async function loadAgentWorkspace() {
 
 async function createSession(name = "") {
   const agent = getSelectedAgent();
-  if (!agent) throw new Error("Agent not found.");
+  if (!agent) throw new Error(t("error.agentNotFound"));
 
   const sessionName =
     name.trim() ||
-    `Mobile ${new Date().toLocaleTimeString("en-US", {
+    `${t("session.mobilePrefix")} ${new Date().toLocaleTimeString(currentLang === "zh" ? "zh-CN" : "en-US", {
       hour: "2-digit",
       minute: "2-digit",
     })}`;
@@ -870,7 +1057,7 @@ async function streamMessage(path, body, onEvent) {
     throw new Error(await response.text());
   }
   if (!response.body) {
-    throw new Error("Stream response has no readable body.");
+    throw new Error(t("error.streamNoBody"));
   }
 
   const reader = response.body.getReader();
@@ -993,7 +1180,7 @@ async function sendToCurrentSession(displayContent, outgoingContent = displayCon
         ) {
           streamedErrorText = extractStreamErrorText(payload);
           if (!streamedAssistantText && streamedErrorText) {
-            renderAgentMessages(`Send failed:${streamedErrorText}`);
+            renderAgentMessages(`${t("error.sendFailed")}${streamedErrorText}`);
           }
         }
       },
@@ -1006,7 +1193,7 @@ async function sendToCurrentSession(displayContent, outgoingContent = displayCon
       displayedMessages.push(createTextMessage("assistant", streamedAssistantText));
     }
     if (streamedErrorText && (!streamedAssistantText || !streamedAssistantText.includes(streamedErrorText))) {
-      displayedMessages.push(createTextMessage("system", `Send failed:${streamedErrorText}`));
+      displayedMessages.push(createTextMessage("system", `${t("error.sendFailed")}${streamedErrorText}`));
     }
 
     setSessionFallbackMessages(sessionId, displayedMessages);
@@ -1033,7 +1220,7 @@ async function sendToCurrentSession(displayContent, outgoingContent = displayCon
     const errorText = String(error.message || error);
     const failedMessages = [...fallbackMessages];
     if (errorText) {
-      failedMessages.push(createTextMessage("system", `Send failed:${errorText}`));
+      failedMessages.push(createTextMessage("system", `${t("error.sendFailed")}${errorText}`));
     }
 
     if (sessionId && failedMessages.length) {
@@ -1045,9 +1232,9 @@ async function sendToCurrentSession(displayContent, outgoingContent = displayCon
       renderAgentMessages(null, { forceBottom: true });
     } else if (state.selectedSessionId) {
       await loadSession(state.selectedSessionId);
-      alert(`Send failed:${errorText}`);
+      alert(`${t("error.sendFailed")}${errorText}`);
     } else {
-      alert(`Send failed:${errorText}`);
+      alert(`${t("error.sendFailed")}${errorText}`);
     }
     return false;
   } finally {
@@ -1058,7 +1245,7 @@ async function sendToCurrentSession(displayContent, outgoingContent = displayCon
 async function handleHistorySend(content) {
   const topic = state.selectedHistoryTopic;
   if (!topic) {
-    throw new Error("Open a history topic first.");
+    throw new Error(t("error.openTopicFirst"));
   }
   const topicId = topic.id;
 
@@ -1106,7 +1293,7 @@ async function handleHistorySend(content) {
       }
     }
     if (timedOut) {
-      alert("Timed out waiting for a reply. It may still be processing — try refreshing later.");
+      alert(t("error.replyTimeout"));
     }
   } finally {
     setSending(false);
@@ -1128,7 +1315,7 @@ async function handleSend(event) {
     await sendToCurrentSession(content, content);
   } catch (error) {
     console.error(error);
-    alert(`Send failed:${String(error.message || error)}`);
+    alert(`${t("error.sendFailed")}${String(error.message || error)}`);
   }
 }
 
@@ -1181,7 +1368,7 @@ els.refreshAllButton.addEventListener("click", async () => {
     await refreshAll();
   } catch (error) {
     console.error(error);
-    alert(`Refresh failed:${String(error.message || error)}`);
+    alert(`${t("error.refreshFailed")}${String(error.message || error)}`);
   }
 });
 
@@ -1207,7 +1394,7 @@ els.refreshSessionButton.addEventListener("click", async () => {
     }
   } catch (error) {
     console.error(error);
-    alert(`Refresh failed:${String(error.message || error)}`);
+    alert(`${t("error.refreshFailed")}${String(error.message || error)}`);
   }
 });
 
@@ -1217,13 +1404,18 @@ els.newSessionButton.addEventListener("click", async () => {
     await createSession();
   } catch (error) {
     console.error(error);
-    alert(`Failed to create session: ${String(error.message || error)}`);
+    alert(`${t("error.createSessionFailed")} ${String(error.message || error)}`);
   }
 });
 
 els.composer.addEventListener("submit", handleSend);
 
+document.querySelector("#langToggle")?.addEventListener("click", () => {
+  setLang(currentLang === "en" ? "zh" : "en");
+});
+
 async function init() {
+  applyStaticI18n();
   updateModeUI();
   renderAssistantList();
   renderHistoryTopics();
@@ -1235,7 +1427,7 @@ async function init() {
     ensureHistoryRefreshLoop();
   } catch (error) {
     console.error(error);
-    alert(`Initialization failed: ${String(error.message || error)}`);
+    alert(`${t("error.initFailed")} ${String(error.message || error)}`);
   }
 }
 

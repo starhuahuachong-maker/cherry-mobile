@@ -20,17 +20,18 @@
     <div class="bg-orb bg-orb-b"></div>
     <header class="hero">
       <div>
-        <p class="eyebrow">Phone Console</p>
+        <p class="eyebrow" data-i18n="hero.eyebrow">Phone Console</p>
         <h1>Cherry Mobile</h1>
-        <p class="subtle">Browse assistants, topics, and conversation history from your phone. Continue chatting on the go.</p>
+        <p class="subtle" data-i18n="hero.subtitle">Browse assistants, topics, and conversation history from your phone. Continue chatting on the go.</p>
         <div class="mode-switch" id="modeSwitch">
-          <button class="mode-button active" data-mode="history" type="button">History</button>
-          <button class="mode-button" data-mode="agents" type="button">Agents</button>
+          <button class="mode-button active" data-mode="history" type="button" data-i18n="mode.history">History</button>
+          <button class="mode-button" data-mode="agents" type="button" data-i18n="mode.agents">Agents</button>
         </div>
       </div>
       <div class="hero-actions">
-        <span id="healthBadge" class="status-pill">Connecting</span>
-        <button id="refreshAllButton" class="secondary-button" type="button">Refresh</button>
+        <button id="langToggle" class="secondary-button lang-toggle" type="button">中文</button>
+        <span id="healthBadge" class="status-pill" data-i18n="status.connecting">Connecting</span>
+        <button id="refreshAllButton" class="secondary-button" type="button" data-i18n="btn.refresh">Refresh</button>
       </div>
     </header>
 
@@ -38,8 +39,8 @@
       <section id="assistantPanel" class="panel assistants-panel">
         <div class="panel-top panel-heading">
           <div>
-            <p class="eyebrow">Cherry History</p>
-            <h2>Assistants</h2>
+            <p class="eyebrow" data-i18n="panel.assistants.eyebrow">Cherry History</p>
+            <h2 data-i18n="panel.assistants.title">Assistants</h2>
           </div>
         </div>
         <div id="assistantList" class="assistant-list"></div>
@@ -48,34 +49,34 @@
       <section class="panel sidebar">
         <div id="historyControls" class="panel-top panel-heading">
           <div>
-            <p id="listLabel" class="eyebrow">Assistant Topics</p>
-            <h2 id="listTitle">Topics</h2>
+            <p id="listLabel" class="eyebrow" data-i18n="panel.topics.eyebrow">Assistant Topics</p>
+            <h2 id="listTitle" data-i18n="panel.topics.title">Topics</h2>
           </div>
         </div>
 
         <div id="agentControls" class="panel-top hidden">
           <label class="field">
-            <span>Agent</span>
+            <span data-i18n="agent.label">Agent</span>
             <select id="agentSelect"></select>
           </label>
-          <button id="newSessionButton" class="primary-button" type="button">New Session</button>
+          <button id="newSessionButton" class="primary-button" type="button" data-i18n="btn.newSession">New Session</button>
         </div>
         <div id="sessionList" class="session-list"></div>
       </section>
 
       <section class="panel conversation">
         <div class="conversation-top">
-          <button id="backButton" class="secondary-button back-button" type="button">← Back</button>
+          <button id="backButton" class="secondary-button back-button" type="button" data-i18n="btn.back">← Back</button>
           <div>
             <p id="conversationLabel" class="eyebrow">History</p>
-            <h2 id="conversationTitle">Select a topic</h2>
+            <h2 id="conversationTitle" data-i18n="conv.selectTopic">Select a topic</h2>
           </div>
-          <button id="refreshSessionButton" class="secondary-button" type="button">Refresh</button>
+          <button id="refreshSessionButton" class="secondary-button" type="button" data-i18n="btn.refreshCurrent">Refresh</button>
         </div>
 
         <div id="messages" class="messages">
           <div class="empty-state">
-            <p>Conversation messages will appear here.</p>
+            <p data-i18n="conv.emptyState">Conversation messages will appear here.</p>
           </div>
         </div>
 
@@ -84,10 +85,11 @@
             id="composerInput"
             rows="3"
             placeholder="Continue this Cherry conversation"
+            data-i18n-placeholder="composer.placeholder"
           ></textarea>
           <div class="composer-actions">
-            <p id="composerHint" class="subtle">If no session is selected, a new one will be created on send.</p>
-            <button id="sendButton" class="primary-button" type="submit">Send</button>
+            <p id="composerHint" class="subtle" data-i18n="composer.hint.sessionAuto">If no session is selected, a new one will be created on send.</p>
+            <button id="sendButton" class="primary-button" type="submit" data-i18n="btn.send">Send</button>
           </div>
         </form>
       </section>

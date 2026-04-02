@@ -604,3 +604,9 @@ body.conversation-focus .composer {
     max-width: none;
   }
 }
+
+.lang-toggle {
+  font-size: 0.82rem;
+  padding: 0.3rem 0.7rem;
+  min-width: auto;
+}
