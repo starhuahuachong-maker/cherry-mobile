@@ -1,0 +1,10 @@
+.venv/
+node_modules/
+__pycache__/
+*.pyc
+asar-full/
+asar-inspect/
+log/
+data/
+*.tmp
+.DS_Store

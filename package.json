@@ -1,0 +1,7 @@
+{
+  "name": "cherry-mobile",
+  "private": true,
+  "dependencies": {
+    "leveldown": "^6.1.1"
+  }
+}
