@@ -15,7 +15,7 @@ import urllib.error
 import urllib.parse
 import urllib.request
 from datetime import datetime, timezone
-from http.cookies import SimpleCookie
+from http.cookies import CookieError, SimpleCookie
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
 from uuid import uuid4
@@ -34,6 +34,7 @@ PORT = int(os.environ.get("CHERRY_MOBILE_PORT", "8765"))
 API_KEY_PATTERN = re.compile(r"cs-sk-[A-Za-z0-9-]+")
 THINKING_RE = re.compile(r"<(?:antml:)?thinking>.*?</(?:antml:)?thinking>", re.IGNORECASE | re.DOTALL)
 KEY_CACHE: dict[str, object] = {"signature": None, "value": None}
+KEY_CACHE_LOCK = threading.Lock()
 CONTINUATIONS_FILE = ROOT / "data" / "continuations.json"
 CONTINUATIONS_LOCK = threading.Lock()
 HOP_BY_HOP_HEADERS = {
@@ -53,9 +54,32 @@ DESKTOP_SEND_LOCK = threading.Lock()
 MAX_REQUEST_BODY_BYTES = int(os.environ.get("CHERRY_MOBILE_MAX_BODY_BYTES", str(1024 * 1024)))
 
 
+def _paths_with_mtime_desc(paths: list[Path]) -> list[tuple[Path, int]]:
+    items: list[tuple[Path, int]] = []
+    for path in paths:
+        try:
+            mtime_ns = path.stat().st_mtime_ns
+        except OSError:
+            continue
+        items.append((path, mtime_ns))
+    items.sort(key=lambda item: item[1], reverse=True)
+    return items
+
+
+def _recent_log_infos(limit: int | None = None) -> list[tuple[Path, int]]:
+    try:
+        candidates = list(CHERRY_LOG_DIR.glob("app.*.log"))
+    except OSError:
+        return []
+
+    infos = _paths_with_mtime_desc(candidates)
+    if limit is None:
+        return infos
+    return infos[:limit]
+
+
 def latest_log_signature() -> tuple[tuple[str, int], ...]:
-    paths = sorted(CHERRY_LOG_DIR.glob("app.*.log"), key=lambda path: path.stat().st_mtime_ns, reverse=True)
-    return tuple((path.name, path.stat().st_mtime_ns) for path in paths[:5])
+    return tuple((path.name, mtime_ns) for path, mtime_ns in _recent_log_infos(limit=5))
 
 
 def load_cherry_api_key() -> str:
@@ -63,17 +87,28 @@ def load_cherry_api_key() -> str:
     if env_key:
         return env_key
 
-    signature = latest_log_signature()
-    if KEY_CACHE["signature"] == signature and KEY_CACHE["value"]:
-        return str(KEY_CACHE["value"])
+    log_infos = _recent_log_infos()
+    signature = tuple((path.name, mtime_ns) for path, mtime_ns in log_infos[:5])
+    with KEY_CACHE_LOCK:
+        if KEY_CACHE["signature"] == signature and KEY_CACHE["value"]:
+            return str(KEY_CACHE["value"])
 
-    paths = sorted(CHERRY_LOG_DIR.glob("app.*.log"), key=lambda path: path.stat().st_mtime_ns, reverse=True)
-    for path in paths:
-        matches = API_KEY_PATTERN.findall(path.read_text(errors="ignore"))
+    for path, _mtime_ns in log_infos:
+        try:
+            content = path.read_text(errors="ignore")
+        except OSError:
+            continue
+        matches = API_KEY_PATTERN.findall(content)
         if matches:
-            KEY_CACHE["signature"] = signature
-            KEY_CACHE["value"] = matches[-1]
+            with KEY_CACHE_LOCK:
+                KEY_CACHE["signature"] = signature
+                KEY_CACHE["value"] = matches[-1]
             return matches[-1]
+
+    with KEY_CACHE_LOCK:
+        cached = KEY_CACHE["value"]
+    if cached:
+        return str(cached)
 
     raise RuntimeError("Cherry Studio API key not found. Open Cherry Studio and enable its API server first.")
 
@@ -138,8 +173,16 @@ def _read_json_file(path: Path) -> dict[str, object]:
         return {}
     try:
         return json.loads(path.read_text(encoding="utf-8"))
-    except json.JSONDecodeError:
+    except (json.JSONDecodeError, OSError):
         return {}
+
+
+def _write_json_file_atomic(path: Path, payload: object) -> None:
+    path.parent.mkdir(parents=True, exist_ok=True)
+    temp_path = path.with_suffix(".tmp")
+    body = json.dumps(payload, ensure_ascii=False, indent=2)
+    temp_path.write_text(body, encoding="utf-8")
+    temp_path.replace(path)
 
 
 def load_continuations() -> dict[str, object]:
@@ -152,12 +195,8 @@ def load_continuations() -> dict[str, object]:
 
 
 def save_continuations(payload: dict[str, object]) -> None:
-    CONTINUATIONS_FILE.parent.mkdir(parents=True, exist_ok=True)
-    temp_path = CONTINUATIONS_FILE.with_suffix(".tmp")
-    body = json.dumps(payload, ensure_ascii=False, indent=2)
     with CONTINUATIONS_LOCK:
-        temp_path.write_text(body, encoding="utf-8")
-        temp_path.replace(CONTINUATIONS_FILE)
+        _write_json_file_atomic(CONTINUATIONS_FILE, payload)
 
 
 def load_merged_snapshot() -> dict[str, object]:
@@ -188,7 +227,10 @@ def request_token_from_headers(headers: object) -> str:
     cookie_header = getattr(headers, "get", lambda *_args, **_kwargs: None)("Cookie")
     if cookie_header:
         cookie = SimpleCookie()
-        cookie.load(cookie_header)
+        try:
+            cookie.load(cookie_header)
+        except CookieError:
+            cookie = SimpleCookie()
         morsel = cookie.get(SESSION_COOKIE_NAME)
         if morsel and morsel.value:
             return morsel.value
@@ -638,10 +680,7 @@ def save_continuation_messages(topic_id: str, messages: list[dict[str, object]])
             existing = []
         existing.extend(messages)
         topics[topic_id] = existing
-        CONTINUATIONS_FILE.parent.mkdir(parents=True, exist_ok=True)
-        temp_path = CONTINUATIONS_FILE.with_suffix(".tmp")
-        temp_path.write_text(json.dumps(payload, ensure_ascii=False, indent=2), encoding="utf-8")
-        temp_path.replace(CONTINUATIONS_FILE)
+        _write_json_file_atomic(CONTINUATIONS_FILE, payload)
 
 
 def remove_continuation_messages(topic_id: str, message_ids: set[str]) -> None:
@@ -657,10 +696,7 @@ def remove_continuation_messages(topic_id: str, message_ids: set[str]) -> None:
         topics[topic_id] = [m for m in existing if str(m.get("id") or "") not in message_ids]
         if not topics[topic_id]:
             del topics[topic_id]
-        CONTINUATIONS_FILE.parent.mkdir(parents=True, exist_ok=True)
-        temp_path = CONTINUATIONS_FILE.with_suffix(".tmp")
-        temp_path.write_text(json.dumps(payload, ensure_ascii=False, indent=2), encoding="utf-8")
-        temp_path.replace(CONTINUATIONS_FILE)
+        _write_json_file_atomic(CONTINUATIONS_FILE, payload)
 
 
 PENDING_REPLIES: dict[str, dict[str, object]] = {}
@@ -767,6 +803,15 @@ class CherryMobileHandler(BaseHTTPRequestHandler):
     def append_session_cookie(self) -> None:
         self.send_header("Set-Cookie", f"{SESSION_COOKIE_NAME}={SESSION_TOKEN}; HttpOnly; Path=/; SameSite=Strict")
 
+    def write_response_body(self, body: bytes, *, flush: bool = False) -> bool:
+        try:
+            self.wfile.write(body)
+            if flush:
+                self.wfile.flush()
+        except (BrokenPipeError, ConnectionResetError):
+            return False
+        return True
+
     def ensure_api_auth(self, send_body: bool = True) -> bool:
         if is_authenticated(self.headers):
             return True
@@ -794,7 +839,8 @@ class CherryMobileHandler(BaseHTTPRequestHandler):
                 self.send_json(400, {"error": "Invalid JSON body"}, send_body=send_body)
                 return True
             except ValueError as exc:
-                self.send_json(413, {"error": str(exc)}, send_body=send_body)
+                status = 413 if "too large" in str(exc).lower() else 400
+                self.send_json(status, {"error": str(exc)}, send_body=send_body)
                 return True
             except KeyError:
                 self.send_json(404, {"error": "History topic not found"}, send_body=send_body)
@@ -838,15 +884,23 @@ class CherryMobileHandler(BaseHTTPRequestHandler):
 
         if parsed.path == "/api/history/files":
             files = []
-            for path in sorted(CHERRY_HISTORY_DIR.glob("*.md"), key=lambda item: item.stat().st_mtime_ns, reverse=True):
-                content = path.read_text(errors="ignore")
+            try:
+                candidates = list(CHERRY_HISTORY_DIR.glob("*.md"))
+            except OSError:
+                candidates = []
+            for path, _mtime_ns in _paths_with_mtime_desc(candidates):
+                try:
+                    stat = path.stat()
+                    content = path.read_text(errors="ignore")
+                except OSError:
+                    continue
                 files.append(
                     {
                         "id": path.name,
                         "title": history_title(content, path.stem),
                         "excerpt": history_excerpt(content),
-                        "updated_at": datetime.fromtimestamp(path.stat().st_mtime).isoformat(),
-                        "size": path.stat().st_size,
+                        "updated_at": datetime.fromtimestamp(stat.st_mtime).isoformat(),
+                        "size": stat.st_size,
                     }
                 )
             self.send_json(200, {"files": files}, send_body=send_body)
@@ -860,12 +914,17 @@ class CherryMobileHandler(BaseHTTPRequestHandler):
                 self.send_json(404, {"error": "History file not found"}, send_body=send_body)
                 return True
 
-            content = candidate.read_text(errors="ignore")
+            try:
+                stat = candidate.stat()
+                content = candidate.read_text(errors="ignore")
+            except OSError:
+                self.send_json(503, {"error": "History file temporarily unavailable"}, send_body=send_body)
+                return True
             payload = {
                 "id": candidate.name,
                 "title": history_title(content, candidate.stem),
-                "updated_at": datetime.fromtimestamp(candidate.stat().st_mtime).isoformat(),
-                "size": candidate.stat().st_size,
+                "updated_at": datetime.fromtimestamp(stat.st_mtime).isoformat(),
+                "size": stat.st_size,
                 "content": content,
             }
             self.send_json(200, payload, send_body=send_body)
@@ -874,15 +933,26 @@ class CherryMobileHandler(BaseHTTPRequestHandler):
         return False
 
     def read_json_body(self) -> dict[str, object]:
-        content_length = int(self.headers.get("Content-Length", "0"))
+        content_length_raw = self.headers.get("Content-Length", "0")
+        try:
+            content_length = int(content_length_raw)
+        except ValueError as exc:
+            raise ValueError("Invalid Content-Length header") from exc
+        if content_length < 0:
+            raise ValueError("Invalid Content-Length header")
         if content_length > MAX_REQUEST_BODY_BYTES:
             raise ValueError("Request body too large")
         raw = self.rfile.read(content_length) if content_length else b"{}"
         if not raw:
             return {}
-        data = json.loads(raw.decode("utf-8"))
+        try:
+            decoded = raw.decode("utf-8")
+        except UnicodeDecodeError as exc:
+            invalid_text = raw.decode("utf-8", "ignore")
+            raise json.JSONDecodeError("Body must be valid UTF-8 JSON", invalid_text, exc.start) from exc
+        data = json.loads(decoded)
         if not isinstance(data, dict):
-            raise json.JSONDecodeError("Body must be a JSON object", raw.decode("utf-8", "ignore"), 0)
+            raise json.JSONDecodeError("Body must be a JSON object", decoded, 0)
         return data
 
     def do_OPTIONS(self) -> None:
@@ -904,7 +974,11 @@ class CherryMobileHandler(BaseHTTPRequestHandler):
             self.send_error(404, "Not found")
             return
 
-        content = candidate.read_bytes()
+        try:
+            content = candidate.read_bytes()
+        except OSError:
+            self.send_error(503, "Static file temporarily unavailable")
+            return
         self.send_response(200)
         self.send_header("Content-Type", guess_mime_type(candidate))
         self.send_header("Content-Length", str(len(content)))
@@ -913,7 +987,7 @@ class CherryMobileHandler(BaseHTTPRequestHandler):
         self.append_common_headers()
         self.end_headers()
         if send_body:
-            self.wfile.write(content)
+            self.write_response_body(content)
 
     def proxy_request(self, send_body: bool) -> None:
         parsed = urllib.parse.urlparse(self.path)
@@ -934,7 +1008,15 @@ class CherryMobileHandler(BaseHTTPRequestHandler):
             self.send_json(503, {"error": str(exc)}, send_body=send_body)
             return
 
-        content_length = int(self.headers.get("Content-Length", "0"))
+        content_length_raw = self.headers.get("Content-Length", "0")
+        try:
+            content_length = int(content_length_raw)
+        except ValueError:
+            self.send_json(400, {"error": "Invalid Content-Length header"}, send_body=send_body)
+            return
+        if content_length < 0:
+            self.send_json(400, {"error": "Invalid Content-Length header"}, send_body=send_body)
+            return
         if content_length > MAX_REQUEST_BODY_BYTES:
             self.send_json(413, {"error": "Request body too large"}, send_body=send_body)
             return
@@ -966,8 +1048,8 @@ class CherryMobileHandler(BaseHTTPRequestHandler):
                         chunk = response.read(8192)
                         if not chunk:
                             break
-                        self.wfile.write(chunk)
-                        self.wfile.flush()
+                        if not self.write_response_body(chunk, flush=True):
+                            break
         except urllib.error.HTTPError as exc:
             payload = exc.read()
             self.send_response(exc.code)
@@ -977,7 +1059,7 @@ class CherryMobileHandler(BaseHTTPRequestHandler):
             self.append_common_headers()
             self.end_headers()
             if send_body:
-                self.wfile.write(payload)
+                self.write_response_body(payload)
         except urllib.error.URLError as exc:
             self.send_json(502, {"error": f"Cherry Studio API unavailable: {exc.reason}"}, send_body=send_body)
 
@@ -990,14 +1072,19 @@ class CherryMobileHandler(BaseHTTPRequestHandler):
         self.append_common_headers()
         self.end_headers()
         if send_body:
-            self.wfile.write(body)
+            self.write_response_body(body)
 
     def log_message(self, fmt: str, *args: object) -> None:
         sys.stderr.write(f"[CherryMobile] {self.address_string()} - {fmt % args}\n")
 
 
+class CherryMobileHTTPServer(ThreadingHTTPServer):
+    allow_reuse_address = True
+    daemon_threads = True
+
+
 def main() -> None:
-    server = ThreadingHTTPServer((HOST, PORT), CherryMobileHandler)
+    server = CherryMobileHTTPServer((HOST, PORT), CherryMobileHandler)
     print(f"Cherry mobile server listening on http://{HOST}:{PORT}", flush=True)
     try:
         server.serve_forever()

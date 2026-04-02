@@ -4,6 +4,8 @@ import json
 import re
 import shutil
 import subprocess
+import threading
+import time
 from pathlib import Path
 
 
@@ -24,23 +26,53 @@ CONTENT_MARKERS = (b'content"', b"contentc", b"content\x00c")
 UTF16_CONTENT_MARKERS = {b"contentc", b"content\x00c"}
 SNAPSHOT_CACHE: dict[str, object] = {"signature": None, "value": None}
 PERSIST_CACHE: dict[str, object] = {"signature": None, "value": None}
+SNAPSHOT_CACHE_LOCK = threading.Lock()
+PERSIST_CACHE_LOCK = threading.Lock()
+FILE_READ_RETRIES = 3
+FILE_READ_RETRY_DELAY_SEC = 0.05
 
 
 def _iter_leveldb_files(path: Path) -> list[Path]:
+    try:
+        candidates = list(path.glob("*"))
+    except OSError:
+        return []
     return sorted(
-        [candidate for candidate in path.glob("*") if candidate.suffix in {".ldb", ".log"}],
+        [candidate for candidate in candidates if candidate.suffix in {".ldb", ".log"}],
         key=lambda candidate: candidate.name,
     )
 
 
+def _signature_for_files(files: list[Path]) -> tuple[tuple[str, int, int], ...]:
+    entries: list[tuple[str, int, int]] = []
+    for path in files:
+        try:
+            stat = path.stat()
+        except OSError:
+            continue
+        entries.append((path.name, stat.st_size, stat.st_mtime_ns))
+    return tuple(entries)
+
+
+def _read_bytes_with_retries(path: Path) -> bytes | None:
+    for attempt in range(FILE_READ_RETRIES):
+        try:
+            return path.read_bytes()
+        except OSError:
+            if attempt + 1 >= FILE_READ_RETRIES:
+                return None
+            time.sleep(FILE_READ_RETRY_DELAY_SEC)
+    return None
+
+
 def storage_signature() -> tuple[tuple[str, int, int], ...]:
     files = _iter_leveldb_files(LOCAL_STORAGE_DIR) + _iter_leveldb_files(INDEXEDDB_DIR)
-    return tuple((path.name, path.stat().st_size, path.stat().st_mtime_ns) for path in files)
+    return _signature_for_files(files)
 
 
 def local_storage_signature() -> tuple[tuple[str, int, int], ...]:
     files = _iter_leveldb_files(LOCAL_STORAGE_DIR)
-    return tuple((path.name, path.stat().st_size, path.stat().st_mtime_ns) for path in files)
+    return _signature_for_files(files)
 
 
 def _read_marker_value(data: bytes, marker: bytes, start: int, limit: int) -> str | None:
@@ -193,17 +225,30 @@ def _load_assistants_state() -> dict[str, object]:
 
 
 def _read_persist_outer() -> dict[str, object]:
-    result = subprocess.run(
-        [_node_binary(), str(EXTRACTOR), "--outer"],
-        cwd=str(ROOT),
-        capture_output=True,
-        text=True,
-        check=False,
-    )
+    try:
+        result = subprocess.run(
+            [_node_binary(), str(EXTRACTOR), "--outer"],
+            cwd=str(ROOT),
+            capture_output=True,
+            text=True,
+            timeout=20,
+            check=False,
+        )
+    except subprocess.TimeoutExpired as exc:
+        raise RuntimeError("Timed out while reading Cherry Studio local storage") from exc
     if result.returncode != 0:
         message = result.stderr.strip() or result.stdout.strip() or "Failed to read Cherry Studio local storage"
         raise RuntimeError(message)
-    return json.loads(result.stdout)
+    output = result.stdout.strip()
+    if not output:
+        raise RuntimeError("Cherry Studio local storage reader returned no data")
+    try:
+        payload = json.loads(output)
+    except json.JSONDecodeError as exc:
+        raise RuntimeError("Failed to parse Cherry Studio local storage output") from exc
+    if not isinstance(payload, dict):
+        raise RuntimeError("Cherry Studio local storage reader returned an unexpected payload")
+    return payload
 
 
 def _parse_persist_value(value: object) -> object:
@@ -219,10 +264,19 @@ def _parse_persist_value(value: object) -> object:
 
 def get_persist_state() -> dict[str, object]:
     signature = local_storage_signature()
-    if PERSIST_CACHE["signature"] == signature and PERSIST_CACHE["value"]:
-        return PERSIST_CACHE["value"]  # type: ignore[return-value]
+    with PERSIST_CACHE_LOCK:
+        if PERSIST_CACHE["signature"] == signature and PERSIST_CACHE["value"]:
+            return PERSIST_CACHE["value"]  # type: ignore[return-value]
 
-    outer = _read_persist_outer()
+    try:
+        outer = _read_persist_outer()
+    except Exception:
+        with PERSIST_CACHE_LOCK:
+            cached = PERSIST_CACHE["value"]
+        if cached:
+            return cached  # type: ignore[return-value]
+        raise
+
     parsed = {key: _parse_persist_value(value) for key, value in outer.items()}
     persist_state = {
         "assistants": parsed.get("assistants") or {},
@@ -231,8 +285,9 @@ def get_persist_state() -> dict[str, object]:
         "openclaw": parsed.get("openclaw") or {},
         "raw": outer,
     }
-    PERSIST_CACHE["signature"] = signature
-    PERSIST_CACHE["value"] = persist_state
+    with PERSIST_CACHE_LOCK:
+        PERSIST_CACHE["signature"] = signature
+        PERSIST_CACHE["value"] = persist_state
     return persist_state
 
 
@@ -242,7 +297,9 @@ def _parse_indexeddb() -> tuple[dict[str, dict[str, object]], dict[str, dict[str
     marker = b'o"\x02id"$'
 
     for file_index, path in enumerate(_iter_leveldb_files(INDEXEDDB_DIR)):
-        data = path.read_bytes()
+        data = _read_bytes_with_retries(path)
+        if data is None:
+            continue
         start = 0
 
         while True:
@@ -434,7 +491,9 @@ def _parse_legacy_topic_messages(
     legacy_messages: dict[str, dict[str, object]] = {}
 
     for file_index, path in enumerate(_iter_leveldb_files(INDEXEDDB_DIR)):
-        data = path.read_bytes()
+        data = _read_bytes_with_retries(path)
+        if data is None:
+            continue
         containers = [
             (match.start(), match.group(1).decode())
             for match in TOPIC_CONTAINER_RE.finditer(data)
@@ -631,10 +690,20 @@ def _build_snapshot() -> dict[str, object]:
 
 def get_snapshot() -> dict[str, object]:
     signature = storage_signature()
-    if SNAPSHOT_CACHE["signature"] == signature and SNAPSHOT_CACHE["value"]:
-        return SNAPSHOT_CACHE["value"]  # type: ignore[return-value]
+    with SNAPSHOT_CACHE_LOCK:
+        if SNAPSHOT_CACHE["signature"] == signature and SNAPSHOT_CACHE["value"]:
+            return SNAPSHOT_CACHE["value"]  # type: ignore[return-value]
 
-    snapshot = _build_snapshot()
-    SNAPSHOT_CACHE["signature"] = signature
-    SNAPSHOT_CACHE["value"] = snapshot
+    try:
+        snapshot = _build_snapshot()
+    except Exception:
+        with SNAPSHOT_CACHE_LOCK:
+            cached = SNAPSHOT_CACHE["value"]
+        if cached:
+            return cached  # type: ignore[return-value]
+        raise
+
+    with SNAPSHOT_CACHE_LOCK:
+        SNAPSHOT_CACHE["signature"] = signature
+        SNAPSHOT_CACHE["value"] = snapshot
     return snapshot
