@@ -470,7 +470,7 @@ def _legacy_topic_lookup(assistants_state: dict[str, object]) -> dict[str, dict[
             lookup[topic_id] = {
                 "id": topic_id,
                 "assistantId": str(topic.get("assistantId") or assistant["id"]),
-                "name": str(topic.get("name") or "未命名话题"),
+                "name": str(topic.get("name") or "Untitled Topic"),
                 "createdAt": topic.get("createdAt"),
                 "updatedAt": topic.get("updatedAt"),
             }
@@ -656,7 +656,7 @@ def _build_snapshot() -> dict[str, object]:
             topic_payload = {
                 "id": topic_id,
                 "assistantId": str(topic.get("assistantId") or assistant["id"]),
-                "name": str(topic.get("name") or "未命名话题"),
+                "name": str(topic.get("name") or "Untitled Topic"),
                 "createdAt": topic.get("createdAt"),
                 "updatedAt": topic.get("updatedAt"),
                 "messageCount": len(messages),
@@ -678,7 +678,7 @@ def _build_snapshot() -> dict[str, object]:
         assistants.append(
             {
                 "id": str(assistant["id"]),
-                "name": str(assistant.get("name") or "未命名助手"),
+                "name": str(assistant.get("name") or "Untitled Assistant"),
                 "emoji": str(assistant.get("emoji") or "😀"),
                 "type": str(assistant.get("type") or "assistant"),
                 "topics": assistant_topics,

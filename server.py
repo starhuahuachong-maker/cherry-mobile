@@ -300,14 +300,14 @@ def topic_with_pending_overlay(topic: dict[str, object], pending: dict[str, obje
         messages.append(user_message)
 
     if pending.get("status") == "pending":
-        assistant_message = build_history_message("assistant", result, "正在回复…", later_iso(user_created_at, 200))
+        assistant_message = build_history_message("assistant", result, "Replying…", later_iso(user_created_at, 200))
         assistant_message["status"] = "streaming"
         messages.append(assistant_message)
     elif pending.get("status") == "error":
         assistant_message = build_history_message(
             "assistant",
             result,
-            f"发送失败：{str(pending.get('error') or '未知错误')}",
+            f"Send failed: {str(pending.get('error') or 'Unknown error')}",
             later_iso(user_created_at, 200),
         )
         assistant_message["status"] = "error"
@@ -446,11 +446,11 @@ def call_anthropic_provider(
 ) -> str:
     api_host = str(provider.get("apiHost") or "").rstrip("/")
     if not api_host:
-        raise RuntimeError("Anthropic provider 缺少 API Host。")
+        raise RuntimeError("Anthropic provider is missing API Host.")
 
     api_keys = split_api_keys(provider.get("apiKey"))
     if not api_keys:
-        raise RuntimeError("Anthropic provider 没有可用 API key。")
+        raise RuntimeError("Anthropic provider has no usable API key.")
 
     payload: dict[str, object] = {
         "model": model_id,
@@ -465,7 +465,7 @@ def call_anthropic_provider(
         payload["top_p"] = settings.get("topP")
 
     encoded = json.dumps(payload, ensure_ascii=False).encode("utf-8")
-    last_error = "Anthropic 请求失败。"
+    last_error = "Anthropic request failed."
 
     for index, api_key in enumerate(api_keys):
         request = urllib.request.Request(
@@ -485,15 +485,15 @@ def call_anthropic_provider(
                 text = extract_anthropic_text(payload)
                 if text:
                     return text
-                raise RuntimeError("Anthropic 返回了空内容。")
+                raise RuntimeError("Anthropic returned empty content.")
         except urllib.error.HTTPError as exc:
             body = exc.read()
-            last_error = parse_provider_error(body, f"Anthropic 请求失败（HTTP {exc.code}）")
+            last_error = parse_provider_error(body, f"Anthropic request failed (HTTP {exc.code})")
             if exc.code in {401, 403, 429} and index + 1 < len(api_keys):
                 continue
             raise RuntimeError(last_error) from exc
         except urllib.error.URLError as exc:
-            last_error = f"Anthropic 请求失败：{exc.reason}"
+            last_error = f"Anthropic request failed: {exc.reason}"
             if index + 1 < len(api_keys):
                 continue
             raise RuntimeError(last_error) from exc
@@ -518,9 +518,9 @@ def build_history_message(role: str, topic: dict[str, object], content: str, cre
 def drive_desktop_cherry_send(assistant_name: str, topic: dict[str, object], user_text: str) -> None:
     topic_name = str(topic.get("name") or "").strip()
     if not assistant_name:
-        raise RuntimeError("没有找到这个话题对应的助手名称。")
+        raise RuntimeError("Could not find the assistant name for this topic.")
     if not topic_name:
-        raise RuntimeError("这个话题缺少标题，暂时无法在桌面 Cherry 里定位。")
+        raise RuntimeError("This topic has no title — cannot locate it in desktop Cherry.")
 
     payload = {
         "assistant": assistant_name,
@@ -539,12 +539,12 @@ def drive_desktop_cherry_send(assistant_name: str, topic: dict[str, object], use
             check=False,
         )
     except FileNotFoundError as exc:
-        raise RuntimeError("系统里没有可用的 `swift` 命令，没法驱动桌面 Cherry。") from exc
+        raise RuntimeError("The `swift` command is not available — cannot drive desktop Cherry.") from exc
     except subprocess.TimeoutExpired as exc:
-        raise RuntimeError("驱动桌面 Cherry 发送消息超时了。") from exc
+        raise RuntimeError("Timed out driving desktop Cherry to send message.") from exc
 
     if completed.returncode != 0:
-        message = (completed.stderr or completed.stdout or "").strip() or "驱动桌面 Cherry 发送消息失败。"
+        message = (completed.stderr or completed.stdout or "").strip() or "Failed to drive desktop Cherry to send message."
         raise RuntimeError(message)
 
 
@@ -586,8 +586,8 @@ def wait_for_real_topic_reply(
         time.sleep(0.35)
 
     if latest_topic:
-        raise RuntimeError("桌面 Cherry 已收到消息，但在等待真实回复时超时。")
-    raise RuntimeError("桌面 Cherry 发送后，手机端暂时还没读到这个话题。")
+        raise RuntimeError("Desktop Cherry received the message, but timed out waiting for a real reply.")
+    raise RuntimeError("Message sent via desktop Cherry, but the topic hasn't appeared on mobile yet.")
 
 
 def _build_context_messages(topic: dict[str, object], user_text: str) -> list[dict[str, str]]:
@@ -665,7 +665,7 @@ def call_cherry_api_direct(
                 if choices:
                     return str(choices[0].get("message", {}).get("content") or "").strip()
 
-    raise RuntimeError("没有可用的 API provider 来降级发送。")
+    raise RuntimeError("No API provider available for fallback send.")
 
 
 def save_continuation_messages(topic_id: str, messages: list[dict[str, object]]) -> None:
@@ -708,7 +708,7 @@ def _async_reply_worker(topic_id: str, topic: dict[str, object], user_text: str,
         persist_state = get_persist_state()
         assistant = assistant_lookup(persist_state).get(str(topic.get("assistantId") or ""))
         if not assistant:
-            raise RuntimeError("没有找到助手配置。")
+            raise RuntimeError("Assistant configuration not found.")
 
         with DESKTOP_SEND_LOCK:
             drive_desktop_cherry_send(str(assistant.get("name") or ""), topic, user_text)
@@ -728,7 +728,7 @@ def continue_history_topic(topic_id: str, user_text: str) -> dict[str, object]:
     with PENDING_REPLIES_LOCK:
         existing = PENDING_REPLIES.get(topic_id)
         if existing and existing.get("status") == "pending":
-            raise RuntimeError("这个话题上一条消息还在发送中。")
+            raise RuntimeError("The previous message in this topic is still being sent.")
         if existing and existing.get("status") == "error":
             PENDING_REPLIES.pop(topic_id, None)
 
@@ -846,7 +846,7 @@ class CherryMobileHandler(BaseHTTPRequestHandler):
                 self.send_json(404, {"error": "History topic not found"}, send_body=send_body)
                 return True
             except RuntimeError as exc:
-                status = 409 if "还在发送中" in str(exc) else 502
+                status = 409 if "still being sent" in str(exc) else 502
                 self.send_json(status, {"error": str(exc)}, send_body=send_body)
                 return True
             except Exception as exc:  # noqa: BLE001

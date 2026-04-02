@@ -77,10 +77,10 @@ function dateValue(value) {
 }
 
 function formatDate(value) {
-  if (!value) return "未知时间";
+  if (!value) return "Unknown time";
   const date = new Date(value);
   if (Number.isNaN(date.getTime())) return String(value);
-  return new Intl.DateTimeFormat("zh-CN", {
+  return new Intl.DateTimeFormat("en-US", {
     month: "short",
     day: "numeric",
     hour: "2-digit",
@@ -100,10 +100,10 @@ function escapeHtml(text) {
 function roleLabel(role) {
   return (
     {
-      user: "我",
-      assistant: "助手",
-      system: "系统",
-      tool: "工具",
+      user: "You",
+      assistant: "Assistant",
+      system: "System",
+      tool: "Tool",
     }[role] ?? role
   );
 }
@@ -178,23 +178,23 @@ function updateActionAvailability() {
   const historyReady = Boolean(state.selectedHistoryTopic);
 
   if (state.mode === "history") {
-    els.sendButton.textContent = "续聊";
+    els.sendButton.textContent = "Continue";
     els.sendButton.disabled = state.sending || !historyReady;
     els.composerInput.disabled = state.sending || !historyReady;
     els.composerInput.placeholder = state.selectedHistoryTopic
-      ? "基于这个历史话题继续聊"
-      : "先打开一个历史话题，再继续聊";
+      ? "Continue this history topic"
+      : "Open a history topic first";
     els.composerHint.textContent = historyReady
-      ? "会直接驱动桌面 Cherry 在这个真实话题里发送，手机和电脑看到的是同一份记录。"
-      : "先点开一个具体话题，再继续聊。";
+      ? "Messages are sent through desktop Cherry — phone and desktop share the same conversation."
+      : "Open a topic first to continue chatting.";
   } else {
-    els.sendButton.textContent = "发送";
+    els.sendButton.textContent = "Send";
     els.sendButton.disabled = state.sending || !agentReady;
     els.composerInput.disabled = state.sending || !agentReady;
-    els.composerInput.placeholder = "给当前 Cherry 会话继续发消息";
+    els.composerInput.placeholder = "Continue this Cherry conversation";
     els.composerHint.textContent = agentReady
-      ? "如果没选会话，发送时会自动创建一个新会话。"
-      : "当前没有可用 agent，只能浏览历史对话。";
+      ? "If no session is selected, a new one will be created on send."
+      : "No agents available. You can only browse history.";
   }
 
   els.agentSelect.disabled = state.sending || !agentReady;
@@ -222,7 +222,7 @@ function updateModeUI() {
   els.historyControls.classList.toggle("hidden", state.mode !== "history");
   els.agentControls.classList.toggle("hidden", state.mode !== "agents");
   els.composer.classList.remove("hidden");
-  els.refreshSessionButton.textContent = state.mode === "history" ? "刷新当前话题" : "刷新当前";
+  els.refreshSessionButton.textContent = state.mode === "history" ? "Refresh Topic" : "Refresh";
   updateActionAvailability();
 }
 
@@ -253,10 +253,10 @@ async function api(path, options = {}) {
 async function refreshHealth() {
   try {
     const health = await api("/health");
-    setStatus(health.status === "ok" ? "已连接" : "异常", health.status === "ok" ? "ok" : "bad");
+    setStatus(health.status === "ok" ? "Connected" : "Error", health.status === "ok" ? "ok" : "bad");
   } catch (error) {
     console.error(error);
-    setStatus("不可用", "bad");
+    setStatus("Unavailable", "bad");
   }
 }
 
@@ -275,7 +275,7 @@ function sortedTopics(assistant) {
 }
 
 function sessionLabel(session) {
-  return session.name?.trim() || "未命名会话";
+  return session.name?.trim() || "Untitled Session";
 }
 
 function normalizeSessions(sessions) {
@@ -310,7 +310,7 @@ function renderAssistantList() {
   if (!state.historyAssistants.length) {
     const empty = document.createElement("div");
     empty.className = "empty-state compact";
-    empty.innerHTML = "<p>还没有读到 Cherry 里的助手。</p>";
+    empty.innerHTML = "<p>No assistants found in Cherry.</p>";
     els.assistantList.append(empty);
     return;
   }
@@ -323,8 +323,8 @@ function renderAssistantList() {
     button.innerHTML = `
       <span class="assistant-emoji">${escapeHtml(assistant.emoji || "😀")}</span>
       <span class="assistant-copy">
-        <span class="assistant-name">${escapeHtml(assistant.name || "未命名助手")}</span>
-        <span class="assistant-meta">${escapeHtml(String(assistant.topics?.length ?? 0))} 个话题</span>
+        <span class="assistant-name">${escapeHtml(assistant.name || "Untitled Assistant")}</span>
+        <span class="assistant-meta">${escapeHtml(String(assistant.topics?.length ?? 0))} topics</span>
       </span>
     `;
     button.addEventListener("click", async () => {
@@ -357,14 +357,14 @@ function renderHistoryTopics() {
   const assistant = getSelectedHistoryAssistant();
   const topics = sortedTopics(assistant);
 
-  els.listLabel.textContent = assistant ? `助手 · ${assistant.name}` : "Cherry History";
-  els.listTitle.textContent = "话题";
+  els.listLabel.textContent = assistant ? `Assistant · ${assistant.name}` : "Cherry History";
+  els.listTitle.textContent = "Topics";
   els.sessionList.innerHTML = "";
 
   if (!assistant) {
     const empty = document.createElement("div");
     empty.className = "empty-state";
-    empty.innerHTML = "<p>先选择一个助手。</p>";
+    empty.innerHTML = "<p>Select an assistant first.</p>";
     els.sessionList.append(empty);
     return;
   }
@@ -372,7 +372,7 @@ function renderHistoryTopics() {
   if (!topics.length) {
     const empty = document.createElement("div");
     empty.className = "empty-state";
-    empty.innerHTML = "<p>这个助手下面还没有话题。</p>";
+    empty.innerHTML = "<p>This assistant has no topics yet.</p>";
     els.sessionList.append(empty);
     return;
   }
@@ -383,11 +383,11 @@ function renderHistoryTopics() {
     button.disabled = state.sending;
     button.className = `session-card ${topic.id === state.selectedHistoryTopicId ? "active" : ""}`.trim();
     button.innerHTML = `
-      <span class="session-title">${escapeHtml(topic.name || "未命名话题")}</span>
+      <span class="session-title">${escapeHtml(topic.name || "Untitled Topic")}</span>
       <span class="session-meta">${escapeHtml(formatDate(topic.updatedAt || topic.createdAt))} · ${escapeHtml(
         String(topic.messageCount ?? 0),
-      )} 条消息</span>
-      <span class="session-meta">${escapeHtml(topic.preview || "暂无摘要")}</span>
+      )} messages</span>
+      <span class="session-meta">${escapeHtml(topic.preview || "No preview")}</span>
     `;
     button.addEventListener("click", () => {
       if (state.sending) return;
@@ -403,7 +403,7 @@ function renderAgentOptions() {
   if (!state.agents.length) {
     const option = document.createElement("option");
     option.value = "";
-    option.textContent = "暂无 agent";
+    option.textContent = "No agents available";
     els.agentSelect.append(option);
     els.agentSelect.disabled = true;
     updateActionAvailability();
@@ -423,13 +423,13 @@ function renderAgentOptions() {
 
 function renderSessions() {
   els.listLabel.textContent = "Cherry Agent";
-  els.listTitle.textContent = "会话";
+  els.listTitle.textContent = "Sessions";
   els.sessionList.innerHTML = "";
 
   if (!state.agents.length) {
     const empty = document.createElement("div");
     empty.className = "empty-state";
-    empty.innerHTML = "<p>当前没有可用 agent。</p>";
+    empty.innerHTML = "<p>No agents available.</p>";
     els.sessionList.append(empty);
     return;
   }
@@ -437,7 +437,7 @@ function renderSessions() {
   if (!state.sessions.length) {
     const empty = document.createElement("div");
     empty.className = "empty-state";
-    empty.innerHTML = "<p>这个 agent 还没有会话。</p>";
+    empty.innerHTML = "<p>This agent has no sessions yet.</p>";
     els.sessionList.append(empty);
     return;
   }
@@ -464,18 +464,18 @@ function showHistoryHeader() {
   const topic = state.selectedHistoryTopic;
 
   if (!assistant) {
-    setConversationHeader("History", "选择一个助手");
+    setConversationHeader("History", "Select an assistant");
     return;
   }
 
   if (!topic) {
-    setConversationHeader(`${assistant.emoji || "😀"} ${assistant.name}`, "选择一个话题");
+    setConversationHeader(`${assistant.emoji || "😀"} ${assistant.name}`, "Select a topic");
     return;
   }
 
   setConversationHeader(
     `${assistant.emoji || "😀"} ${assistant.name} · ${formatDate(topic.updatedAt || topic.createdAt)}`,
-    topic.name || "未命名话题",
+    topic.name || "Untitled Topic",
   );
 }
 
@@ -525,7 +525,7 @@ function renderAgentMessages(extraAssistant = null, options = {}) {
   els.messages.innerHTML = "";
 
   if (!messages.length && !extraAssistant) {
-    renderConversationEmpty("这个会话还没有消息。");
+    renderConversationEmpty("This session has no messages yet.");
     return;
   }
 
@@ -548,7 +548,7 @@ function renderHistoryMessages(options = {}) {
   els.messages.innerHTML = "";
 
   if (!topic) {
-    renderConversationEmpty("这里会显示这个话题的旧对话内容。");
+    renderConversationEmpty("Previous messages for this topic will appear here.");
     return;
   }
 
@@ -557,12 +557,12 @@ function renderHistoryMessages(options = {}) {
   );
 
   if (!messages.length) {
-    renderConversationEmpty("这个话题还没有可显示的消息。");
+    renderConversationEmpty("This topic has no messages to display.");
     return;
   }
 
   for (const message of messages) {
-    const text = String(message.content || "").trim() || "（这条消息没有可解析的文本块）";
+    const text = String(message.content || "").trim() || "(No parseable text blocks in this message)";
     els.messages.append(renderMessageBubble(message.role, text, formatDate(message.createdAt)));
   }
 
@@ -640,7 +640,7 @@ async function loadHistoryTopicWithOptions(topicId, options = {}) {
   renderHistoryTopics();
   showHistoryHeader();
   if (!options.silent) {
-    renderConversationEmpty("正在读取这个话题的历史正文。");
+    renderConversationEmpty("Loading topic history…");
   }
 
   const requestId = ++historyTopicRequestToken;
@@ -748,7 +748,7 @@ async function loadSessions() {
 
 function showAgentHeader(session = state.selectedSession) {
   if (!session) {
-    setConversationHeader("Session", "选择一个会话");
+    setConversationHeader("Session", "Select a session");
     return;
   }
 
@@ -818,11 +818,11 @@ async function loadAgentWorkspace() {
 
 async function createSession(name = "") {
   const agent = getSelectedAgent();
-  if (!agent) throw new Error("没有找到 agent。");
+  if (!agent) throw new Error("Agent not found.");
 
   const sessionName =
     name.trim() ||
-    `手机会话 ${new Date().toLocaleTimeString("zh-CN", {
+    `Mobile ${new Date().toLocaleTimeString("en-US", {
       hour: "2-digit",
       minute: "2-digit",
     })}`;
@@ -870,7 +870,7 @@ async function streamMessage(path, body, onEvent) {
     throw new Error(await response.text());
   }
   if (!response.body) {
-    throw new Error("流式响应没有可读数据。");
+    throw new Error("Stream response has no readable body.");
   }
 
   const reader = response.body.getReader();
@@ -993,7 +993,7 @@ async function sendToCurrentSession(displayContent, outgoingContent = displayCon
         ) {
           streamedErrorText = extractStreamErrorText(payload);
           if (!streamedAssistantText && streamedErrorText) {
-            renderAgentMessages(`发送失败：${streamedErrorText}`);
+            renderAgentMessages(`Send failed:${streamedErrorText}`);
           }
         }
       },
@@ -1006,7 +1006,7 @@ async function sendToCurrentSession(displayContent, outgoingContent = displayCon
       displayedMessages.push(createTextMessage("assistant", streamedAssistantText));
     }
     if (streamedErrorText && (!streamedAssistantText || !streamedAssistantText.includes(streamedErrorText))) {
-      displayedMessages.push(createTextMessage("system", `发送失败：${streamedErrorText}`));
+      displayedMessages.push(createTextMessage("system", `Send failed:${streamedErrorText}`));
     }
 
     setSessionFallbackMessages(sessionId, displayedMessages);
@@ -1033,7 +1033,7 @@ async function sendToCurrentSession(displayContent, outgoingContent = displayCon
     const errorText = String(error.message || error);
     const failedMessages = [...fallbackMessages];
     if (errorText) {
-      failedMessages.push(createTextMessage("system", `发送失败：${errorText}`));
+      failedMessages.push(createTextMessage("system", `Send failed:${errorText}`));
     }
 
     if (sessionId && failedMessages.length) {
@@ -1045,9 +1045,9 @@ async function sendToCurrentSession(displayContent, outgoingContent = displayCon
       renderAgentMessages(null, { forceBottom: true });
     } else if (state.selectedSessionId) {
       await loadSession(state.selectedSessionId);
-      alert(`发送失败：${errorText}`);
+      alert(`Send failed:${errorText}`);
     } else {
-      alert(`发送失败：${errorText}`);
+      alert(`Send failed:${errorText}`);
     }
     return false;
   } finally {
@@ -1058,7 +1058,7 @@ async function sendToCurrentSession(displayContent, outgoingContent = displayCon
 async function handleHistorySend(content) {
   const topic = state.selectedHistoryTopic;
   if (!topic) {
-    throw new Error("先打开一个历史话题。");
+    throw new Error("Open a history topic first.");
   }
   const topicId = topic.id;
 
@@ -1106,7 +1106,7 @@ async function handleHistorySend(content) {
       }
     }
     if (timedOut) {
-      alert("等待回复超时，可能还在后台处理中。稍后刷新试试。");
+      alert("Timed out waiting for a reply. It may still be processing — try refreshing later.");
     }
   } finally {
     setSending(false);
@@ -1128,7 +1128,7 @@ async function handleSend(event) {
     await sendToCurrentSession(content, content);
   } catch (error) {
     console.error(error);
-    alert(`发送失败：${String(error.message || error)}`);
+    alert(`Send failed:${String(error.message || error)}`);
   }
 }
 
@@ -1181,7 +1181,7 @@ els.refreshAllButton.addEventListener("click", async () => {
     await refreshAll();
   } catch (error) {
     console.error(error);
-    alert(`刷新失败：${String(error.message || error)}`);
+    alert(`Refresh failed:${String(error.message || error)}`);
   }
 });
 
@@ -1207,7 +1207,7 @@ els.refreshSessionButton.addEventListener("click", async () => {
     }
   } catch (error) {
     console.error(error);
-    alert(`刷新失败：${String(error.message || error)}`);
+    alert(`Refresh failed:${String(error.message || error)}`);
   }
 });
 
@@ -1217,7 +1217,7 @@ els.newSessionButton.addEventListener("click", async () => {
     await createSession();
   } catch (error) {
     console.error(error);
-    alert(`创建会话失败：${String(error.message || error)}`);
+    alert(`Failed to create session: ${String(error.message || error)}`);
   }
 });
 
@@ -1235,7 +1235,7 @@ async function init() {
     ensureHistoryRefreshLoop();
   } catch (error) {
     console.error(error);
-    alert(`初始化失败：${String(error.message || error)}`);
+    alert(`Initialization failed: ${String(error.message || error)}`);
   }
 }
 
