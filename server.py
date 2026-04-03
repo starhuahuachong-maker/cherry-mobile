@@ -338,7 +338,12 @@ def _auto_clear_stale_pending(snapshot: dict[str, object], pending_items: dict[s
             for msg in topic.get("messages") or []:
                 if str(msg.get("id") or "") in baseline_ids:
                     continue
-                if str(msg.get("role") or "") == "assistant" and str(msg.get("createdAt") or "") >= user_created:
+                if str(msg.get("role") or "") != "assistant":
+                    continue
+                if str(msg.get("createdAt") or "") < user_created:
+                    continue
+                content = sanitize_history_text("assistant", msg.get("content"))
+                if content:
                     has_reply = True
                     break
             if has_reply:

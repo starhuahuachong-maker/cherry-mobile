@@ -226,12 +226,15 @@ function setLang(lang) {
   localStorage.setItem("cherry-mobile-lang", lang);
   applyStaticI18n();
   updateModeUI();
-  renderAssistantList();
-  renderHistoryTopics();
-  showHistoryHeader();
   if (state.mode === "history") {
+    renderAssistantList();
+    renderHistoryTopics();
+    showHistoryHeader();
     renderHistoryMessages();
   } else {
+    renderAgentOptions();
+    renderSessions();
+    showAgentHeader();
     renderAgentMessages();
   }
 }
