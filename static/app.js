@@ -60,11 +60,13 @@ const translations = {
     "status.connected": "Connected",
     "status.error": "Error",
     "status.unavailable": "Unavailable",
+    "status.streaming": "streaming",
     "btn.refresh": "Refresh",
 
     // Assistant panel
     "panel.assistants.eyebrow": "Cherry History",
     "panel.assistants.title": "Assistants",
+    "panel.agents.eyebrow": "Cherry Agent",
 
     // Sidebar
     "panel.topics.eyebrow": "Assistant Topics",
@@ -143,10 +145,12 @@ const translations = {
     "status.connected": "已连接",
     "status.error": "异常",
     "status.unavailable": "不可用",
+    "status.streaming": "回复中",
     "btn.refresh": "刷新",
 
     "panel.assistants.eyebrow": "Cherry History",
     "panel.assistants.title": "助手",
+    "panel.agents.eyebrow": "Cherry Agent",
 
     "panel.topics.eyebrow": "助手话题",
     "panel.topics.title": "话题",
@@ -484,7 +488,7 @@ function renderMessageBubble(role, text, meta = "", streaming = false) {
   article.className = `message ${role}`.trim();
   article.innerHTML = `
     <span class="message-role">${escapeHtml(roleLabel(role))}${meta ? ` · ${escapeHtml(meta)}` : ""}${
-      streaming ? " · streaming" : ""
+      streaming ? ` · ${t("status.streaming")}` : ""
     }</span>
     <pre class="message-content">${escapeHtml(text || "")}</pre>
   `;
@@ -609,7 +613,7 @@ function renderAgentOptions() {
 }
 
 function renderSessions() {
-  els.listLabel.textContent = "Cherry Agent";
+  els.listLabel.textContent = t("panel.agents.eyebrow");
   els.listTitle.textContent = t("panel.sessions.title");
   els.sessionList.innerHTML = "";
 
