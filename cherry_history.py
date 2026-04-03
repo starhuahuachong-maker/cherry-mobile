@@ -24,12 +24,14 @@ TEXT_BLOCK_TYPES = {"main_text", "thinking", "translation", "error"}
 LEGACY_ROLE_VALUES = {"user", "assistant", "system", "tool"}
 CONTENT_MARKERS = (b'content"', b"contentc", b"content\x00c")
 UTF16_CONTENT_MARKERS = {b"contentc", b"content\x00c"}
-SNAPSHOT_CACHE: dict[str, object] = {"signature": None, "value": None}
-PERSIST_CACHE: dict[str, object] = {"signature": None, "value": None}
+SNAPSHOT_CACHE: dict[str, object] = {"signature": None, "value": None, "built_at": 0.0}
+PERSIST_CACHE: dict[str, object] = {"signature": None, "value": None, "built_at": 0.0}
 SNAPSHOT_CACHE_LOCK = threading.Lock()
 PERSIST_CACHE_LOCK = threading.Lock()
 FILE_READ_RETRIES = 3
 FILE_READ_RETRY_DELAY_SEC = 0.05
+SNAPSHOT_MAX_AGE_SEC = 1.0
+PERSIST_MAX_AGE_SEC = 5.0
 
 
 def _iter_leveldb_files(path: Path) -> list[Path]:
@@ -264,8 +266,10 @@ def _parse_persist_value(value: object) -> object:
 
 def get_persist_state() -> dict[str, object]:
     signature = local_storage_signature()
+    now = time.monotonic()
     with PERSIST_CACHE_LOCK:
-        if PERSIST_CACHE["signature"] == signature and PERSIST_CACHE["value"]:
+        cache_age = now - (PERSIST_CACHE["built_at"] or 0.0)
+        if PERSIST_CACHE["signature"] == signature and cache_age < PERSIST_MAX_AGE_SEC and PERSIST_CACHE["value"]:
             return PERSIST_CACHE["value"]  # type: ignore[return-value]
 
     try:
@@ -288,6 +292,7 @@ def get_persist_state() -> dict[str, object]:
     with PERSIST_CACHE_LOCK:
         PERSIST_CACHE["signature"] = signature
         PERSIST_CACHE["value"] = persist_state
+        PERSIST_CACHE["built_at"] = time.monotonic()
     return persist_state
 
 
@@ -688,10 +693,13 @@ def _build_snapshot() -> dict[str, object]:
     return {"assistants": assistants, "topics": topics}
 
 
-def get_snapshot() -> dict[str, object]:
+def get_snapshot(*, force: bool = False) -> dict[str, object]:
     signature = storage_signature()
+    now = time.monotonic()
     with SNAPSHOT_CACHE_LOCK:
-        if SNAPSHOT_CACHE["signature"] == signature and SNAPSHOT_CACHE["value"]:
+        cache_age = now - (SNAPSHOT_CACHE["built_at"] or 0.0)
+        sig_match = SNAPSHOT_CACHE["signature"] == signature
+        if not force and sig_match and cache_age < SNAPSHOT_MAX_AGE_SEC and SNAPSHOT_CACHE["value"]:
             return SNAPSHOT_CACHE["value"]  # type: ignore[return-value]
 
     try:
@@ -706,4 +714,5 @@ def get_snapshot() -> dict[str, object]:
     with SNAPSHOT_CACHE_LOCK:
         SNAPSHOT_CACHE["signature"] = signature
         SNAPSHOT_CACHE["value"] = snapshot
+        SNAPSHOT_CACHE["built_at"] = time.monotonic()
     return snapshot

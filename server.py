@@ -322,10 +322,44 @@ def topic_with_pending_overlay(topic: dict[str, object], pending: dict[str, obje
     return result
 
 
+def _auto_clear_stale_pending(snapshot: dict[str, object], pending_items: dict[str, dict[str, object]]) -> dict[str, dict[str, object]]:
+    """Remove pending entries whose real reply has already appeared in the snapshot."""
+    stale_ids: list[str] = []
+    for topic_id, pending in pending_items.items():
+        if pending.get("status") not in ("pending",):
+            continue
+        topic = snapshot.get("topics", {}).get(topic_id)
+        if not topic:
+            continue
+        if topic_has_real_user_message(topic, pending):
+            baseline_ids = {str(item) for item in pending.get("baselineIds") or []}
+            user_created = str(pending.get("userMessage", {}).get("createdAt") or "")
+            has_reply = False
+            for msg in topic.get("messages") or []:
+                if str(msg.get("id") or "") in baseline_ids:
+                    continue
+                if str(msg.get("role") or "") == "assistant" and str(msg.get("createdAt") or "") >= user_created:
+                    has_reply = True
+                    break
+            if has_reply:
+                stale_ids.append(topic_id)
+    if stale_ids:
+        with PENDING_REPLIES_LOCK:
+            for topic_id in stale_ids:
+                PENDING_REPLIES.pop(topic_id, None)
+        for topic_id in stale_ids:
+            pending_items.pop(topic_id, None)
+    return pending_items
+
+
 def overlay_pending_snapshot(snapshot: dict[str, object]) -> dict[str, object]:
     with PENDING_REPLIES_LOCK:
         pending_items = {topic_id: copy.deepcopy(entry) for topic_id, entry in PENDING_REPLIES.items()}
 
+    if not pending_items:
+        return snapshot
+
+    pending_items = _auto_clear_stale_pending(snapshot, pending_items)
     if not pending_items:
         return snapshot
 
@@ -559,7 +593,7 @@ def wait_for_real_topic_reply(
     latest_topic: dict[str, object] | None = None
 
     while time.monotonic() < deadline:
-        snapshot = get_snapshot()
+        snapshot = get_snapshot(force=True)
         topic = snapshot.get("topics", {}).get(topic_id)
         if topic:
             latest_topic = topic
